@@ -206,10 +206,14 @@ void gFBDC::setResolution(int xres, int yres, int bpp)
 {
 	if (m_pixmap && (surface.x == xres) && (surface.y == yres) && (surface.bpp == bpp))
 		return;
-
+#ifndef CONFIG_ION	
 	if (gAccel::getInstance())
 		gAccel::getInstance()->releaseAccelMemorySpace();
-
+#else
+	gRC *grc = gRC::getInstance();
+	if (grc)
+		grc->lock();
+#endif	
 	fb->SetMode(xres, yres, bpp);
 
 	surface.x = xres;
@@ -238,10 +242,12 @@ void gFBDC::setResolution(int xres, int yres, int bpp)
 
 	eDebug("[gFBDC] resolution: %dx%dx%d stride=%d, %dkB available for acceleration surfaces.",
 		 surface.x, surface.y, surface.bpp, fb->Stride(), (fb->Available() - fb_size)/1024);
-
+#ifndef CONFIG_ION
+	/* accel is already set in fb.cpp */
+	eDebug("[gFBDC] %dkB available for acceleration surfaces.", (fb->Available() - fb_size)/1024);	
 	if (gAccel::getInstance())
 		gAccel::getInstance()->setAccelMemorySpace(fb->lfb + fb_size, surface.data_phys + fb_size, fb->Available() - fb_size);
-
+#endif
 	if (!surface.clut.data)
 	{
 		surface.clut.colors = 256;
@@ -252,6 +258,10 @@ void gFBDC::setResolution(int xres, int yres, int bpp)
 	surface_back.clut = surface.clut;
 
 	m_pixmap = new gPixmap(&surface);
+#ifdef CONFIG_ION
+	if (grc)
+		grc->unlock();
+#endif	
 }
 
 void gFBDC::saveSettings()
