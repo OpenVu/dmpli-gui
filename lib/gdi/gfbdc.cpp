@@ -7,13 +7,16 @@
 
 #include <time.h>
 
+#if defined(CONFIG_ION) || defined(CONFIG_HISILICON_FB)
+
 gFBDC::gFBDC()
 {
 	fb=new fbClass;
-
+#ifndef CONFIG_ION	
 	if (!fb->Available())
 		eFatal("[gFBDC] no framebuffer available");
-
+#endif
+	
 	int xres;
 	int yres;
 	int bpp;
@@ -145,6 +148,30 @@ void gFBDC::exec(const gOpcode *o)
 	case gOpcode::flush:
 		fb->blit();
 		break;
+#ifdef CONFIG_ION
+		if (surface_back.data_phys)
+		{
+			gUnmanagedSurface s(surface);
+			surface = surface_back;
+			surface_back = s;
+
+			fb->waitVSync();
+			if (surface.data_phys > surface_back.data_phys)
+			{
+				fb->setOffset(0);
+			}
+			else
+			{
+				fb->setOffset(surface_back.y);
+			}
+			bcm_accel_blit(
+				surface_back.data_phys, surface_back.x, surface_back.y, surface_back.stride, 0,
+				surface.data_phys, surface.x, surface.y, surface.stride,
+				0, 0, surface.x, surface.y,
+				0, 0, surface.x, surface.y,
+				0, 0);
+		}
+#endif			
 	default:
 		gDC::exec(o);
 		break;
