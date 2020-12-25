@@ -8,6 +8,7 @@
 #include <time.h>
 
 #if defined(CONFIG_ION) || defined(CONFIG_HISILICON_FB)
+#include <lib/gdi/grc.h>
 
 gFBDC::gFBDC()
 {
